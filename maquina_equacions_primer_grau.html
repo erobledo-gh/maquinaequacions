@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Màquina d'Equacions de Primer Grau</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0f1117;
+    --surface:  #181c23;
+    --card:     #1e2330;
+    --border:   #2a3040;
+    --accent:   #f0c040;
+    --accent2:  #40c8f0;
+    --accent3:  #f07040;
+    --accent4:  #c040f0;
+    --muted:    #5a6478;
+    --text:     #e8ecf4;
+    --green:    #4af0a0;
+    --red:      #f05060;
+  }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse 80% 40% at 50% -10%, #f0c04012 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 47px, #ffffff04 47px, #ffffff04 48px),
+      repeating-linear-gradient(90deg, transparent, transparent 47px, #ffffff04 47px, #ffffff04 48px);
+    font-family: 'Syne', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 16px 80px;
+  }
+
+  .header { text-align: center; margin-bottom: 40px; }
+  .header h1 {
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .header p {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-top: 8px;
+  }
+  .header-score {
+    margin-top: 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50px;
+    padding: 8px 20px;
+  }
+  .header-score .pts-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .header-score .pts-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    transition: transform 0.2s, color 0.2s;
+  }
+  .header-score .pts-val.bump { animation: ptsAnim 0.4s ease; }
+  @keyframes ptsAnim {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+  .scoring-legend {
+    margin-top: 14px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .leg-item {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .leg-item .leg-pts { font-weight: 700; }
+  .leg-item.leg-basic    { border-color: #4af0a040; color: var(--green); }
+  .leg-item.leg-rookie   { border-color: #40c8f040; color: var(--accent2); }
+  .leg-item.leg-advanced { border-color: #f0704040; color: var(--accent3); }
+  .leg-item.leg-promax   { border-color: #c040f040; color: var(--accent4); }
+
+  .machine {
+    width: 100%; max-width: 700px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .level-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .lvl-btn {
+    flex: 1; min-width: 100px; padding: 9px 6px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lvl-btn.active-basic    { border-color: var(--green);   color: var(--green);   background: #4af0a010; }
+  .lvl-btn.active-rookie   { border-color: var(--accent2); color: var(--accent2); background: #40c8f010; }
+  .lvl-btn.active-advanced { border-color: var(--accent3); color: var(--accent3); background: #f0704010; }
+  .lvl-btn.active-promax   { border-color: var(--accent4); color: var(--accent4); background: #c040f010; }
+
+  .gen-btn {
+    width: 100%; padding: 18px;
+    border-radius: 14px;
+    border: none;
+    background: var(--accent);
+    color: var(--bg);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .gen-btn:hover { transform: translateY(-2px); box-shadow: 0 0 28px #f0c04055; }
+  .gen-btn:active { transform: translateY(0); }
+
+  /* ── Exercise area ── */
+  .exercise-area {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeUp 0.4s ease forwards;
+  }
+  .exercise-area.visible { display: flex; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* equation display */
+  .eq-display {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    text-align: center;
+  }
+  .eq-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+  }
+  .eq-expr {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(1.1rem, 3.5vw, 1.7rem);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.02em;
+    line-height: 1.6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .eq-expr .hl  { color: var(--accent); }
+  .eq-expr .op  { color: var(--muted); margin: 0 2px; }
+  .eq-expr .eq-sign { color: var(--accent2); margin: 0 8px; }
+
+  /* fraction display */
+  .frac {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    margin: 0 3px;
+    font-size: 0.75em;
+  }
+  .frac .fnum { border-bottom: 2px solid currentColor; padding: 0 3px 1px; line-height: 1.2; }
+  .frac .fden { padding: 2px 3px 0; line-height: 1.2; }
+
+  /* ── Answer input area ── */
+  .answer-area {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .answer-area .section-label { margin-bottom: 14px; }
+
+  .answer-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .answer-row .x-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .answer-row .eq-label2 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.3rem;
+    color: var(--accent2);
+  }
+
+  /* Fraction input toggle */
+  .frac-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    justify-content: center;
+  }
+  .frac-toggle label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+  }
+  .frac-toggle input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 14px; height: 14px;
+    cursor: pointer;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .input-group .frac-inputs {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .ans-input {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+    width: 90px;
+    padding: 10px 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .ans-input:focus { border-color: var(--accent); }
+  .ans-input.correct { border-color: var(--green) !important; background: #4af0a010; color: var(--green); }
+  .ans-input.wrong   { border-color: var(--red)   !important; background: #f0506010; color: var(--red);   animation: shake 0.35s ease; }
+  .ans-input.frac-num { border-radius: 10px 10px 0 0; border-bottom: 1px solid var(--border); width: 80px; padding: 7px 8px; font-size: 1rem; }
+  .ans-input.frac-den { border-radius: 0 0 10px 10px; border-top: none; width: 80px; padding: 7px 8px; font-size: 1rem; }
+  .frac-bar-inp {
+    width: 80px; height: 2px;
+    background: var(--muted);
+    margin: 0;
+  }
+
+  .sign-selector {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .sign-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .sign-btn.active { border-color: var(--accent); color: var(--accent); background: #f0c04015; }
+
+  .verify-btn {
+    width: 100%; padding: 14px;
+    border-radius: 12px;
+    border: 1.5px solid var(--accent2);
+    background: transparent;
+    color: var(--accent2);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .verify-btn:hover { background: #40c8f015; box-shadow: 0 0 16px #40c8f030; }
+  .verify-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* feedback */
+  .feedback {
+    display: none;
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    animation: fadeUp 0.3s ease forwards;
+  }
+  .feedback.ok  { display: block; background: #4af0a015; border: 1px solid #4af0a040; color: var(--green); }
+  .feedback.err { display: block; background: #f0506015; border: 1px solid #f0506040; color: var(--red); }
+  .feedback .fb-title  { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; opacity: 0.7; }
+  .feedback .fb-answer { font-size: 1rem; font-weight: 700; margin-top: 6px; color: var(--text); }
+
+  .score-table { display: flex; flex-direction: column; gap: 4px; }
+  .score-header {
+    display: grid;
+    grid-template-columns: 1fr 60px 60px 52px 36px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    padding: 0 6px 4px;
+    text-align: center;
+  }
+  .score-header div:first-child { text-align: left; }
+  .score-row-lvl {
+    display: grid;
+    grid-template-columns: 1fr 60px 60px 52px 36px;
+    align-items: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    transition: border-color 0.2s;
+  }
+  .score-row-lvl.active-row { border-color: var(--accent); }
+  .score-lvl-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .lvl-basic    { color: var(--green); }
+  .lvl-rookie   { color: var(--accent2); }
+  .lvl-advanced { color: var(--accent3); }
+  .lvl-promax   { color: var(--accent4); }
+  .score-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  .score-val.green { color: var(--green); }
+  .score-val.red   { color: var(--red); }
+  .reset-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    width: 28px; height: 28px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+  }
+  .reset-btn:hover { border-color: var(--accent3); color: var(--accent3); background: #f0704010; }
+
+  hr.sep { border: none; border-top: 1px solid var(--border); }
+
+  /* hint */
+  .hint-box {
+    display: none;
+    background: #f0c04008;
+    border: 1px solid #f0c04030;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    line-height: 1.7;
+  }
+  .hint-box.visible { display: block; }
+  .hint-btn {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.15s;
+    align-self: flex-start;
+  }
+  .hint-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  @keyframes shake {
+    0%,100%{ transform: translateX(0); }
+    20%    { transform: translateX(-5px); }
+    40%    { transform: translateX(5px); }
+    60%    { transform: translateX(-4px); }
+    80%    { transform: translateX(4px); }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Equacions 1r Grau</h1>
+  <p>màquina de resoldre equacions</p>
+  <div class="header-score">
+    <span class="pts-label">Punts totals</span>
+    <span class="pts-val" id="totalPts">0</span>
+  </div>
+  <div class="scoring-legend">
+    <div class="leg-item leg-basic">🟢 Bàsic <span class="leg-pts">+25 / −10</span></div>
+    <div class="leg-item leg-rookie">🎯 Rookie <span class="leg-pts">+50 / −20</span></div>
+    <div class="leg-item leg-advanced">🔥 Avançat <span class="leg-pts">+75 / −30</span></div>
+    <div class="leg-item leg-promax">💜 Pro Max <span class="leg-pts">+100 / −40</span></div>
+  </div>
+</div>
+
+<div class="machine">
+
+  <!-- Nivell -->
+  <div>
+    <div class="section-label">Nivell de dificultat</div>
+    <div class="level-row">
+      <button class="lvl-btn active-basic" data-level="basic"    onclick="setLevel(this)">🟢 Bàsic</button>
+      <button class="lvl-btn"              data-level="rookie"   onclick="setLevel(this)">🎯 Rookie</button>
+      <button class="lvl-btn"              data-level="advanced" onclick="setLevel(this)">🔥 Avançat</button>
+      <button class="lvl-btn"              data-level="promax"   onclick="setLevel(this)">💜 Pro Max</button>
+    </div>
+  </div>
+
+  <!-- Puntuació -->
+  <div id="scoreBoard">
+    <div class="section-label" style="margin-bottom:10px">Puntuació per nivell</div>
+    <div class="score-table">
+      <div class="score-header">
+        <div></div>
+        <div>✓ Encerts</div>
+        <div>✗ Errors</div>
+        <div>Pts</div>
+        <div></div>
+      </div>
+      <div class="score-row-lvl active-row" id="row-basic">
+        <div class="score-lvl-name lvl-basic">🟢 Bàsic</div>
+        <div class="score-val green" id="scoreOk-basic">0</div>
+        <div class="score-val red"   id="scoreErr-basic">0</div>
+        <div class="score-val" style="color:var(--accent)" id="scorePts-basic">0</div>
+        <button class="reset-btn" onclick="resetScore('basic')" title="Reinicia">↺</button>
+      </div>
+      <div class="score-row-lvl" id="row-rookie">
+        <div class="score-lvl-name lvl-rookie">🎯 Rookie</div>
+        <div class="score-val green" id="scoreOk-rookie">0</div>
+        <div class="score-val red"   id="scoreErr-rookie">0</div>
+        <div class="score-val" style="color:var(--accent)" id="scorePts-rookie">0</div>
+        <button class="reset-btn" onclick="resetScore('rookie')" title="Reinicia">↺</button>
+      </div>
+      <div class="score-row-lvl" id="row-advanced">
+        <div class="score-lvl-name lvl-advanced">🔥 Avançat</div>
+        <div class="score-val green" id="scoreOk-advanced">0</div>
+        <div class="score-val red"   id="scoreErr-advanced">0</div>
+        <div class="score-val" style="color:var(--accent)" id="scorePts-advanced">0</div>
+        <button class="reset-btn" onclick="resetScore('advanced')" title="Reinicia">↺</button>
+      </div>
+      <div class="score-row-lvl" id="row-promax">
+        <div class="score-lvl-name lvl-promax">💜 Pro Max</div>
+        <div class="score-val green" id="scoreOk-promax">0</div>
+        <div class="score-val red"   id="scoreErr-promax">0</div>
+        <div class="score-val" style="color:var(--accent)" id="scorePts-promax">0</div>
+        <button class="reset-btn" onclick="resetScore('promax')" title="Reinicia">↺</button>
+      </div>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Generate button -->
+  <button class="gen-btn" onclick="generate()">
+    <span>⚡</span>
+    <span id="genBtnText">Genera un exercici</span>
+  </button>
+
+  <!-- Exercise area -->
+  <div id="exerciseArea" class="exercise-area">
+
+    <!-- Equation display -->
+    <div class="eq-display">
+      <div class="eq-label">Resol l'equació</div>
+      <div id="eqExpr" class="eq-expr"></div>
+    </div>
+
+    <!-- Hint -->
+    <div id="hintBtnWrap">
+      <button class="hint-btn" onclick="toggleHint()">💡 Mostra pista</button>
+    </div>
+    <div class="hint-box" id="hintBox"></div>
+
+    <!-- Answer input -->
+    <div class="answer-area">
+      <div class="section-label">Introdueix el valor de x</div>
+      <div class="frac-toggle" id="fracToggle">
+        <input type="checkbox" id="fracCheck" onchange="toggleFracInput()">
+        <label for="fracCheck">La solució és una fracció</label>
+      </div>
+      <div class="answer-row" id="answerRow">
+        <span class="x-label">x</span>
+        <span class="eq-label2">=</span>
+        <!-- sign -->
+        <div class="sign-selector">
+          <button class="sign-btn active" id="signPos" onclick="selectSign(1)">+</button>
+          <button class="sign-btn"        id="signNeg" onclick="selectSign(-1)">−</button>
+        </div>
+        <!-- integer input -->
+        <div class="input-group" id="intInput">
+          <input class="ans-input" id="ansInt" type="number" min="0" placeholder="?" onkeydown="handleKey(event)">
+        </div>
+        <!-- fraction input -->
+        <div class="input-group" id="fracInput" style="display:none">
+          <div class="frac-inputs">
+            <input class="ans-input frac-num" id="ansNum" type="number" min="0" placeholder="?" onkeydown="handleKey(event)">
+            <div class="frac-bar-inp"></div>
+            <input class="ans-input frac-den" id="ansDen" type="number" min="1" placeholder="?" onkeydown="handleKey(event)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verify -->
+    <button class="verify-btn" id="verifyBtn" onclick="verify()">✓ Comprova la resposta</button>
+
+    <!-- Feedback -->
+    <div class="feedback" id="feedback">
+      <div class="fb-title" id="fbTitle"></div>
+      <div id="fbMsg"></div>
+      <div class="fb-answer" id="fbAnswer"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentLevel = 'basic';
+let currentEx    = null;
+let selectedSign = 1;
+let hintVisible  = false;
+let totalPoints  = 0;
+
+const POINTS = { basic: 25, rookie: 50, advanced: 75, promax: 100 };
+const PENALTY = { basic: 10, rookie: 20, advanced: 30, promax: 40 };
+
+const scores = {
+  basic:    { ok: 0, err: 0, pts: 0 },
+  rookie:   { ok: 0, err: 0, pts: 0 },
+  advanced: { ok: 0, err: 0, pts: 0 },
+  promax:   { ok: 0, err: 0, pts: 0 }
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while(b){[a,b]=[b,a%b];} return a||1; }
+function randInt(a, b) { return Math.floor(Math.random()*(b-a+1))+a; }
+function pick(arr)     { return arr[Math.floor(Math.random()*arr.length)]; }
+function nonZero(a, b) { let v; do { v = randInt(a,b); } while(v===0); return v; }
+
+// Reduce fraction num/den
+function reduceFrac(n, d) {
+  const s = (n < 0 ? -1 : 1) * (d < 0 ? -1 : 1);
+  n = Math.abs(n); d = Math.abs(d);
+  const g = gcd(n, d);
+  return { num: s * (n/g), den: d/g };
+}
+
+// Format a term: coef·x or coef (for display in equation)
+// returns HTML string
+function termHTML(coef, withX, color) {
+  const cls = color ? ` class="${color}"` : '';
+  if (withX) {
+    if (coef === 1)  return `<span${cls}>x</span>`;
+    if (coef === -1) return `<span${cls}>−x</span>`;
+    const abs = Math.abs(coef);
+    const sign = coef < 0 ? '−' : '';
+    return `<span${cls}>${sign}${abs}x</span>`;
+  } else {
+    return `<span${cls}>${coef < 0 ? '−' : ''}${Math.abs(coef)}</span>`;
+  }
+}
+
+function signHTML(val, first) {
+  if (first) return val < 0 ? `<span class="op">−</span>` : '';
+  return val < 0 ? `<span class="op"> − </span>` : `<span class="op"> + </span>`;
+}
+
+// Build HTML for a fraction in equation display
+function fracHTML(num, den, color) {
+  const cls = color ? ` style="color:var(--${color})"` : '';
+  const absNum = Math.abs(num);
+  const absDen = Math.abs(den);
+  return `<span class="frac"${cls}><span class="fnum">${absNum}</span><span class="fden">${absDen}</span></span>`;
+}
+
+// Build HTML for a fraction coefficient (num/den)·x
+function fracCoefTermHTML(num, den, withX) {
+  const f = reduceFrac(num, den);
+  if (f.den === 1) return termHTML(f.num, withX, 'hl');
+  const sign = f.num < 0 ? `<span class="op">−</span>` : '';
+  const fr = fracHTML(Math.abs(f.num), f.den, 'accent');
+  if (!withX) return sign + fr;
+  return sign + fr + `<span class="hl">x</span>`;
+}
+
+// ── Exercise generators ────────────────────────────────────────────────────
+
+// BASIC: ax + b = c  (no parentheses, no fractions, solution integer)
+// Solution x = (c-b)/a, must be integer
+function genBasic() {
+  let a, b, c, x;
+  do {
+    a = nonZero(-6, 6);
+    x = randInt(-10, 10);
+    b = nonZero(-10, 10);
+    c = a * x + b;
+  } while (Math.abs(c) > 20 || Math.abs(a) > 8);
+
+  // Build equation HTML: ax + b = c
+  const lhs = buildLinearHTML(a, b);
+  const rhs = `<span class="hl">${c}</span>`;
+  const eqHTML = lhs + `<span class="eq-sign">=</span>` + rhs;
+
+  const bOp = b > 0 ? `resta <strong>${b}</strong>` : `suma <strong>${Math.abs(b)}</strong>`;
+  const hint = b !== 0
+    ? `Primer, ${bOp} als dos costats per deixar <em>ax</em> sol. Després divideix per <strong>${a}</strong>.`
+    : `Divideix els dos costats per <strong>${a}</strong> per aïllar <em>x</em>.`;
+
+  return { eqHTML, solution: { num: x, den: 1 }, hint };
+}
+
+function buildLinearHTML(a, b) {
+  let html = '';
+  // a·x term
+  if (a === 1)       html += `<span class="hl">x</span>`;
+  else if (a === -1) html += `<span class="op">−</span><span class="hl">x</span>`;
+  else if (a < 0)    html += `<span class="op">−</span><span class="hl">${Math.abs(a)}x</span>`;
+  else               html += `<span class="hl">${a}x</span>`;
+  // b term
+  if (b > 0)       html += `<span class="op"> + </span><span class="hl">${b}</span>`;
+  else if (b < 0)  html += `<span class="op"> − </span><span class="hl">${Math.abs(b)}</span>`;
+  return html;
+}
+
+// ROOKIE: a(bx + c) = d  or  ax + b = cx + d  (parentheses, integer solution)
+function genRookie() {
+  const type = Math.random() < 0.5 ? 'paren' : 'twosides';
+  if (type === 'paren') {
+    return genRookieParen();
+  } else {
+    return genRookieTwoSides();
+  }
+}
+
+function genRookieParen() {
+  let a, b, c, d, x;
+  // a(bx + c) = d  → solution x = (d/a - c)/b = (d - a·c)/(a·b)
+  do {
+    a = nonZero(-5, 5);
+    b = nonZero(-5, 5);
+    c = randInt(-8, 8);
+    x = randInt(-8, 8);
+    d = a * (b * x + c);
+  } while (Math.abs(d) > 40 || a === 0 || b === 0);
+
+  let aStr = a === 1 ? '' : (a === -1 ? '−' : (a < 0 ? '−' + Math.abs(a) : a));
+  let bStr = b === 1 ? 'x' : (b === -1 ? '−x' : (b < 0 ? `<span class="op">−</span><span class="hl">${Math.abs(b)}x</span>` : `<span class="hl">${b}x</span>`));
+  if (b === 1) bStr = `<span class="hl">x</span>`;
+  else if (b === -1) bStr = `<span class="op">−</span><span class="hl">x</span>`;
+
+  const cPart = c > 0
+    ? `<span class="op"> + </span><span class="hl">${c}</span>`
+    : c < 0
+      ? `<span class="op"> − </span><span class="hl">${Math.abs(c)}</span>`
+      : '';
+
+  let aHTML;
+  if (a === 1)       aHTML = '';
+  else if (a === -1) aHTML = `<span class="op">−</span>`;
+  else if (a < 0)    aHTML = `<span class="op">−</span><span class="hl">${Math.abs(a)}</span>`;
+  else               aHTML = `<span class="hl">${a}</span>`;
+
+  const eqHTML = `${aHTML}<span style="color:var(--muted)">(</span>${bStr}${cPart}<span style="color:var(--muted)">)</span><span class="eq-sign">=</span><span class="hl">${d}</span>`;
+
+  const hint = `Aplica la <strong>propietat distributiva</strong> per eliminar el parèntesi. Després passa tots els nombres a un costat i els termes amb <em>x</em> a l'altre.`;
+
+  return { eqHTML, solution: { num: x, den: 1 }, hint };
+}
+
+function genRookieTwoSides() {
+  let a, b, c, d, x;
+  // ax + b = cx + d  → x = (d-b)/(a-c), must be integer
+  do {
+    a = nonZero(-6, 6);
+    c = randInt(-6, 6);
+    b = randInt(-10, 10);
+    d = randInt(-10, 10);
+    if (a === c) continue;
+    const num = d - b;
+    const den = a - c;
+    if (num % den !== 0) continue;
+    x = num / den;
+    if (Math.abs(x) > 15) continue;
+    break;
+  } while (true);
+
+  const lhs = buildLinearHTML(a, b);
+  const rhsX = c === 1 ? `<span class="hl">x</span>` : c === -1 ? `<span class="op">−</span><span class="hl">x</span>` : `<span class="hl">${c}x</span>`;
+  const rhsConst = d > 0
+    ? `<span class="op"> + </span><span class="hl">${d}</span>`
+    : d < 0
+      ? `<span class="op"> − </span><span class="hl">${Math.abs(d)}</span>`
+      : '';
+  const rhsFull = (c < 0 ? `<span class="op">−</span><span class="hl">${Math.abs(c)}x</span>` : rhsX) + rhsConst;
+  const eqHTML = lhs + `<span class="eq-sign">=</span>` + (c < 0 ? `<span class="op">−</span><span class="hl">${Math.abs(c)}x</span>` : c === 1 ? `<span class="hl">x</span>` : `<span class="hl">${c}x</span>`) + rhsConst;
+
+  const hint = `Passa tots els termes amb <em>x</em> al costat esquerre i tots els nombres al costat dret. Recorda canviar el signe quan canvies de costat.`;
+
+  return { eqHTML, solution: { num: x, den: 1 }, hint };
+}
+
+// ADVANCED: (a/b)x + c = d  or  ax + b/c = d  — fractions, no parentheses
+// Solution can be fraction
+function genAdvanced() {
+  // (p/q)·x + r = s  → x = (s-r)·q/p
+  let p, q, r, s, num, den;
+  do {
+    p = nonZero(-5, 5);
+    q = randInt(2, 6);
+    if (gcd(Math.abs(p), q) > 1) continue; // keep reduced
+    r = randInt(-8, 8);
+    s = randInt(-8, 8);
+    num = (s - r) * q;
+    den = p;
+    const f = reduceFrac(num, den);
+    if (Math.abs(f.num) > 20 || f.den > 12) continue;
+    break;
+  } while (true);
+
+  const sol = reduceFrac((s - r) * q, p);
+
+  // Build equation HTML:  (p/q)x + r = s
+  const fracPart = fracHTML(p, q, 'accent');
+  let lhs = '';
+  if (p < 0) lhs += `<span class="op">−</span>`;
+  lhs += fracPart + `<span class="hl">x</span>`;
+  if (r > 0)      lhs += `<span class="op"> + </span><span class="hl">${r}</span>`;
+  else if (r < 0) lhs += `<span class="op"> − </span><span class="hl">${Math.abs(r)}</span>`;
+
+  const eqHTML = lhs + `<span class="eq-sign">=</span><span class="hl">${s}</span>`;
+
+  const hint = `Per eliminar la fracció que multiplica <em>x</em>, pensa: com pots aïllar <em>x</em> multiplicant o dividint? La solució pot ser una fracció.`;
+
+  return { eqHTML, solution: sol, hint };
+}
+
+// PRO MAX: always fractions AND parentheses → (p/q)(ax + b) = c/d
+function genProMax() {
+  return genProMaxFracParen();
+}
+
+function genProMaxFracParen() {
+  // (p/q)(ax + b) = r/s  → sol = (r/s · q/p - b)/a = (r·q - b·p·s)/(s·p·a)
+  let p, q, a, b, r, s, sol;
+  do {
+    p = nonZero(-4, 4);
+    q = randInt(2, 5);
+    if (gcd(Math.abs(p), q) > 1) continue;
+    a = nonZero(-4, 4);
+    b = randInt(-6, 6);
+    r = nonZero(-8, 8);
+    s = randInt(2, 5);
+    if (gcd(Math.abs(r), s) > 1) continue;
+    // sol = (r·q - b·p·s) / (s·p·a)
+    const solNum = r * q - b * p * s;
+    const solDen = s * p * a;
+    if (solDen === 0) continue;
+    sol = reduceFrac(solNum, solDen);
+    if (Math.abs(sol.num) > 20 || sol.den > 12) continue;
+    break;
+  } while (true);
+
+  const fr = fracHTML(Math.abs(p), q, 'accent');
+  const frRhs = fracHTML(Math.abs(r), s, 'accent');
+  const signFr = p < 0 ? `<span class="op">−</span>` : '';
+  const signRhs = r < 0 ? `<span class="op">−</span>` : '';
+
+  let inner;
+  if (a === 1)       inner = `<span class="hl">x</span>`;
+  else if (a === -1) inner = `<span class="op">−</span><span class="hl">x</span>`;
+  else if (a < 0)    inner = `<span class="op">−</span><span class="hl">${Math.abs(a)}x</span>`;
+  else               inner = `<span class="hl">${a}x</span>`;
+
+  const bPart = b > 0
+    ? `<span class="op"> + </span><span class="hl">${b}</span>`
+    : b < 0 ? `<span class="op"> − </span><span class="hl">${Math.abs(b)}</span>` : '';
+
+  const eqHTML = `${signFr}${fr}<span style="color:var(--muted)">(</span>${inner}${bPart}<span style="color:var(--muted)">)</span><span class="eq-sign">=</span>${signRhs}${frRhs}`;
+
+  return { eqHTML, solution: sol, hint: null };
+}
+
+// ── Main generate ──────────────────────────────────────────────────────────
+function generate() {
+  if (currentLevel === 'basic')    currentEx = genBasic();
+  else if (currentLevel === 'rookie')   currentEx = genRookie();
+  else if (currentLevel === 'advanced') currentEx = genAdvanced();
+  else                                  currentEx = genProMax();
+
+  // Render equation
+  document.getElementById('eqExpr').innerHTML = currentEx.eqHTML;
+
+  // Reset inputs
+  selectedSign = 1;
+  document.getElementById('signPos').classList.add('active');
+  document.getElementById('signNeg').classList.remove('active');
+  document.getElementById('ansInt').value = '';
+  document.getElementById('ansNum').value = '';
+  document.getElementById('ansDen').value = '';
+  document.getElementById('ansInt').classList.remove('correct','wrong');
+  document.getElementById('ansNum').classList.remove('correct','wrong');
+  document.getElementById('ansDen').classList.remove('correct','wrong');
+  document.getElementById('fracCheck').checked = false;
+  document.getElementById('intInput').style.display = '';
+  document.getElementById('fracInput').style.display = 'none';
+
+  // Hide hint
+  hintVisible = false;
+  document.getElementById('hintBox').classList.remove('visible');
+  document.getElementById('hintBtnWrap').style.display = currentLevel === 'promax' ? 'none' : '';
+
+  // Hide feedback
+  document.getElementById('feedback').className = 'feedback';
+
+  // Show area
+  const area = document.getElementById('exerciseArea');
+  area.classList.remove('visible');
+  void area.offsetWidth;
+  area.classList.add('visible');
+
+  document.getElementById('genBtnText').textContent = 'Nou exercici';
+  document.getElementById('verifyBtn').disabled = false;
+}
+
+// ── Sign selector ─────────────────────────────────────────────────────────
+function selectSign(s) {
+  selectedSign = s;
+  document.getElementById('signPos').classList.toggle('active', s === 1);
+  document.getElementById('signNeg').classList.toggle('active', s === -1);
+}
+
+// ── Fraction input toggle ─────────────────────────────────────────────────
+function toggleFracInput() {
+  const isFrac = document.getElementById('fracCheck').checked;
+  document.getElementById('intInput').style.display  = isFrac ? 'none' : '';
+  document.getElementById('fracInput').style.display = isFrac ? '' : 'none';
+}
+
+// ── Keyboard shortcut ─────────────────────────────────────────────────────
+function handleKey(e) {
+  if (e.key === 'Enter') verify();
+}
+
+// ── Verify ────────────────────────────────────────────────────────────────
+function verify() {
+  const isFrac = document.getElementById('fracCheck').checked;
+  let userNum, userDen;
+
+  if (isFrac) {
+    const n = parseInt(document.getElementById('ansNum').value);
+    const d = parseInt(document.getElementById('ansDen').value);
+    if (isNaN(n) || isNaN(d) || d === 0) {
+      showFeedback('err', '⚠️ Falta informació', 'Introdueix numerador i denominador.', '');
+      return;
+    }
+    userNum = selectedSign * n;
+    userDen = d;
+  } else {
+    const v = parseInt(document.getElementById('ansInt').value);
+    if (isNaN(v)) {
+      showFeedback('err', '⚠️ Falta informació', 'Introdueix un valor per a x.', '');
+      return;
+    }
+    userNum = selectedSign * v;
+    userDen = 1;
+  }
+
+  const userSol = reduceFrac(userNum, userDen);
+  const corrSol = reduceFrac(currentEx.solution.num, currentEx.solution.den);
+
+  const ok = userSol.num === corrSol.num && userSol.den === corrSol.den;
+
+  // Visual feedback on inputs
+  const inputs = isFrac
+    ? [document.getElementById('ansNum'), document.getElementById('ansDen')]
+    : [document.getElementById('ansInt')];
+  inputs.forEach(el => { el.classList.remove('correct','wrong'); el.classList.add(ok ? 'correct' : 'wrong'); });
+
+  const solStr = corrSol.den === 1 ? `${corrSol.num}` : `${corrSol.num}/${corrSol.den}`;
+
+  if (ok) {
+    scores[currentLevel].ok++;
+    scores[currentLevel].pts += POINTS[currentLevel];
+    totalPoints += POINTS[currentLevel];
+    updateScoreDisplay(currentLevel);
+    showFeedback('ok', '✓ Correcte!', `+${POINTS[currentLevel]} punts! Has resolt correctament l'equació.`, `x = ${solStr}`);
+    document.getElementById('verifyBtn').disabled = true;
+  } else {
+    scores[currentLevel].err++;
+    scores[currentLevel].pts -= PENALTY[currentLevel];
+    totalPoints -= PENALTY[currentLevel];
+    updateScoreDisplay(currentLevel);
+    showFeedback('err', '✗ Incorrecte', `−${PENALTY[currentLevel]} punts. La resposta correcta és:`, `x = ${solStr}`);
+  }
+}
+
+function updateScoreDisplay(lvl) {
+  document.getElementById('scoreOk-'  + lvl).textContent = scores[lvl].ok;
+  document.getElementById('scoreErr-' + lvl).textContent = scores[lvl].err;
+  document.getElementById('scorePts-' + lvl).textContent = scores[lvl].pts;
+  const el = document.getElementById('totalPts');
+  el.textContent = totalPoints;
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
+
+function showFeedback(type, title, msg, answer) {
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback ' + type;
+  document.getElementById('fbTitle').textContent  = title;
+  document.getElementById('fbMsg').textContent    = msg;
+  document.getElementById('fbAnswer').textContent = answer;
+}
+
+// ── Hint ──────────────────────────────────────────────────────────────────
+function toggleHint() {
+  if (!currentEx) return;
+  // Pro Max: no hint
+  if (currentLevel === 'promax') return;
+  hintVisible = !hintVisible;
+  const hintBox = document.getElementById('hintBox');
+  if (hintVisible && currentEx.hint) {
+    hintBox.innerHTML = currentEx.hint;
+    hintBox.classList.add('visible');
+  } else {
+    hintBox.classList.remove('visible');
+  }
+}
+
+// ── Level selector ─────────────────────────────────────────────────────────
+function setLevel(btn) {
+  document.querySelectorAll('.lvl-btn').forEach(b => b.className = 'lvl-btn');
+  btn.classList.add('active-' + btn.dataset.level);
+  currentLevel = btn.dataset.level;
+  document.querySelectorAll('.score-row-lvl').forEach(r => r.classList.remove('active-row'));
+  document.getElementById('row-' + currentLevel).classList.add('active-row');
+  // Show/hide hint button for promax
+  document.getElementById('hintBtnWrap').style.display = currentLevel === 'promax' ? 'none' : '';
+}
+
+function resetScore(lvl) {
+  const diff = scores[lvl].pts;
+  totalPoints -= diff;
+  scores[lvl].ok  = 0;
+  scores[lvl].err = 0;
+  scores[lvl].pts = 0;
+  document.getElementById('scoreOk-'  + lvl).textContent = '0';
+  document.getElementById('scoreErr-' + lvl).textContent = '0';
+  document.getElementById('scorePts-' + lvl).textContent = '0';
+  document.getElementById('totalPts').textContent = totalPoints;
+}
+</script>
+</body>
+</html>
